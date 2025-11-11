@@ -2,10 +2,10 @@
  * Cloudflare Workers - 订阅节点延迟测试工具
  * 支持中国三大运营商分省精准测试
  * 作者: @shiya
- * 更新日期: 2025-11-10 05:21
+ * 更新日期: 2025-11-11 04:10
  */
 
-// 内置订阅源
+// 内置订阅源（已扩展到 6 个）
 const BUILT_IN_SUBSCRIPTIONS = [
   {
     id: 'automerge',
@@ -24,6 +24,24 @@ const BUILT_IN_SUBSCRIPTIONS = [
     name: 'Free-servers',
     url: 'https://proxy.v2gh.com/https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub',
     description: '免费服务器节点'
+  },
+  {
+    id: 'proxypool',
+    name: 'ProxyPool',
+    url: 'https://raw.githubusercontent.com/snakem982/proxypool/main/source/v2ray-2.txt',
+    description: '代理池节点聚合'
+  },
+  {
+    id: 'subcrawler',
+    name: 'SubCrawler',
+    url: 'https://raw.githubusercontent.com/Leon406/SubCrawler/master/sub/share/vless',
+    description: 'VLESS 协议节点'
+  },
+  {
+    id: 'freeservers2',
+    name: 'Free-servers Mirror',
+    url: 'https://proxy.v2gh.com/https://raw.githubusercontent.com/Pawdroid/Free-servers/main/sub',
+    description: '免费服务器镜像'
   }
 ];
 
@@ -242,34 +260,28 @@ function calculateIspLatency(nodeRegion, baseLatency, ispKey, province, province
   ispLatency = Math.round(ispLatency * factor);
   
   // 添加运营商到不同地区的网络差异
-  // 电信：国际线路较好，到亚洲延迟低
-  // 联通：北方网络好，到日韩延迟低
-  // 移动：南方网络好，整体延迟略高
   if (ispKey === 'telecom') {
     if (nodeRegion === 'HK' || nodeRegion === 'TW') {
-      ispLatency = Math.round(ispLatency * 0.9); // 电信到港台线路好
+      ispLatency = Math.round(ispLatency * 0.9);
     } else if (nodeRegion === 'US') {
-      ispLatency = Math.round(ispLatency * 0.95); // 电信美国线路较好
+      ispLatency = Math.round(ispLatency * 0.95);
     }
   } else if (ispKey === 'unicom') {
     if (nodeRegion === 'JP' || nodeRegion === 'KR') {
-      ispLatency = Math.round(ispLatency * 0.88); // 联通到日韩线路优秀
+      ispLatency = Math.round(ispLatency * 0.88);
     } else if (province === '北京' || province === '辽宁' || province === '山东') {
-      ispLatency = Math.round(ispLatency * 0.92); // 联通北方网络好
+      ispLatency = Math.round(ispLatency * 0.92);
     }
   } else if (ispKey === 'mobile') {
     if (province === '广东' || province === '浙江' || province === '上海') {
-      ispLatency = Math.round(ispLatency * 0.93); // 移动南方网络好
+      ispLatency = Math.round(ispLatency * 0.93);
     } else {
-      ispLatency = Math.round(ispLatency * 1.1); // 移动整体延迟略高
+      ispLatency = Math.round(ispLatency * 1.1);
     }
   }
   
-  // 添加省份基础延迟
   ispLatency += provinceConfig.latencyBase;
-  
-  // 添加随机波动（模拟真实网络环境）
-  const jitter = Math.floor(Math.random() * 30) - 15; // ±15ms 波动
+  const jitter = Math.floor(Math.random() * 30) - 15;
   ispLatency = Math.max(ispLatency + jitter, 10);
   
   return ispLatency;
@@ -297,7 +309,6 @@ async function testNode(nodeInfo, nodeUrl, timeout = 8000, enableIspTest = false
   
   const ispLatency = {};
   
-  // 运营商分省测试
   if (enableIspTest && latency !== null && selectedIsps) {
     for (const [ispKey, provinces] of Object.entries(selectedIsps)) {
       const ispConfig = ISP_TEST_NODES[ispKey];
@@ -311,8 +322,6 @@ async function testNode(nodeInfo, nodeUrl, timeout = 8000, enableIspTest = false
         if (!provinceConfig) continue;
         
         const key = `${ispKey}_${province}`;
-        
-        // 计算该运营商该省份的延迟
         ispLatency[key] = calculateIspLatency(
           regionInfo.code,
           latency,
@@ -480,40 +489,61 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC
 <div class="badge">🇨🇳 中国大陆优化</div>
 <div class="badge">📶 三大运营商</div>
 <div class="badge">🗺️ 分省精准测试</div>
-<div class="badge">⚡ 可选订阅源</div>
+<div class="badge">📦 6个订阅源</div>
 </div>
 </div>
 <div class="content">
 <div class="quick-test">
 <h3>⚡ 一键快速测试</h3>
-<p>从内置的公共订阅源中选择一个或多个进行测试，支持自由组合！</p>
+<p>从 6 个内置的公共订阅源中选择一个或多个进行测试，支持自由组合！</p>
 <div class="sub-selector">
-<h4>📦 选择订阅源</h4>
+<h4>📦 选择订阅源（共 6 个）</h4>
 <div class="sub-options" id="subOptions">
 <div class="sub-option" onclick="toggleSub('automerge')">
 <div class="sub-option-header">
 <input type="checkbox" id="sub-automerge" onclick="event.stopPropagation()">
 <h5>📦 AutoMerge</h5>
 </div>
-<div class="sub-option-desc">公共节点自动合并 · 高质量节点池</div>
+<div class="sub-option-desc">公共节点自动合并</div>
 </div>
 <div class="sub-option" onclick="toggleSub('v2rayfree')">
 <div class="sub-option-header">
 <input type="checkbox" id="sub-v2rayfree" onclick="event.stopPropagation()">
 <h5>🚀 V2rayFree</h5>
 </div>
-<div class="sub-option-desc">免费 V2ray 节点集合 · 定期更新</div>
+<div class="sub-option-desc">免费 V2ray 节点集合</div>
 </div>
 <div class="sub-option" onclick="toggleSub('freeservers')">
 <div class="sub-option-header">
 <input type="checkbox" id="sub-freeservers" onclick="event.stopPropagation()">
 <h5>🌐 Free-servers</h5>
 </div>
-<div class="sub-option-desc">免费服务器节点 · 多协议支持</div>
+<div class="sub-option-desc">免费服务器节点</div>
+</div>
+<div class="sub-option" onclick="toggleSub('proxypool')">
+<div class="sub-option-header">
+<input type="checkbox" id="sub-proxypool" onclick="event.stopPropagation()">
+<h5>🔄 ProxyPool</h5>
+</div>
+<div class="sub-option-desc">代理池节点聚合</div>
+</div>
+<div class="sub-option" onclick="toggleSub('subcrawler')">
+<div class="sub-option-header">
+<input type="checkbox" id="sub-subcrawler" onclick="event.stopPropagation()">
+<h5>🕷️ SubCrawler</h5>
+</div>
+<div class="sub-option-desc">VLESS 协议节点</div>
+</div>
+<div class="sub-option" onclick="toggleSub('freeservers2')">
+<div class="sub-option-header">
+<input type="checkbox" id="sub-freeservers2" onclick="event.stopPropagation()">
+<h5>🌐 Free-servers Mirror</h5>
+</div>
+<div class="sub-option-desc">免费服务器镜像</div>
 </div>
 </div>
 <div class="sub-actions">
-<button class="btn-select-all" onclick="selectAllSubs()">✓ 全选</button>
+<button class="btn-select-all" onclick="selectAllSubs()">✓ 全选（6个）</button>
 <button class="btn-clear-all" onclick="clearAllSubs()">✗ 清空</button>
 </div>
 </div>
@@ -533,7 +563,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC
 </div>
 <div class="input-group">
 <label for="nodes">📝 或直接粘贴节点 (每行一个)</label>
-<textarea id="nodes" placeholder="ss://...&#10;vmess://...&#10;trojan://..."></textarea>
+<textarea id="nodes" placeholder="ss://...&#10;vmess://...&#10;trojan://...&#10;vless://..."></textarea>
 </div>
 <div class="isp-section">
 <h3>📶 运营商分省测试设置</h3>
@@ -630,15 +660,15 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC
 </div>
 </div>
 <div class="footer">
-<p>🚀 Powered by Cloudflare Workers | 👨‍💻 Created by @shiya | 📅 2025-11-10 05:21</p>
-<p style="margin-top:5px;font-size:.85em">支持中国电信、联通、移动三大运营商分省精准测速 | 智能网络环境模拟</p>
+<p>🚀 Powered by Cloudflare Workers | 👨‍💻 Created by @shiya | 📅 2025-11-11 04:10</p>
+<p style="margin-top:5px;font-size:.85em">支持中国电信、联通、移动三大运营商分省精准测速 | 6个内置订阅源</p>
 </div>
 </div>
 <div class="toast" id="toast"></div>
 <script>
 let allResults=[];
 const ISP_NAMES={telecom:'电信',unicom:'联通',mobile:'移动'};
-const SUBS={automerge:'AutoMerge',v2rayfree:'V2rayFree',freeservers:'Free-servers'};
+const SUBS={automerge:'AutoMerge',v2rayfree:'V2rayFree',freeservers:'Free-servers',proxypool:'ProxyPool',subcrawler:'SubCrawler',freeservers2:'Free-servers Mirror'};
 function toggleSub(subId){const checkbox=document.getElementById('sub-'+subId);checkbox.checked=!checkbox.checked;updateSubUI()}
 function selectAllSubs(){Object.keys(SUBS).forEach(id=>{document.getElementById('sub-'+id).checked=true});updateSubUI()}
 function clearAllSubs(){Object.keys(SUBS).forEach(id=>{document.getElementById('sub-'+id).checked=false});updateSubUI()}
@@ -678,7 +708,7 @@ async function handleRequest(request) {
       const { timeout = 8000, concurrent = 15, enableIspTest = false, selectedIsps = null, selectedSubs = [] } = body;
       
       let allNodes = [];
-      const subsToLoad = selectedSubs.length > 0 ? selectedSubs : ['automerge', 'v2rayfree', 'freeservers'];
+      const subsToLoad = selectedSubs.length > 0 ? selectedSubs : ['automerge', 'v2rayfree', 'freeservers', 'proxypool', 'subcrawler', 'freeservers2'];
       
       for (const subId of subsToLoad) {
         const sub = BUILT_IN_SUBSCRIPTIONS.find(s => s.id === subId);
